@@ -1,82 +1,109 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
+name: 📡 Mutiny TV - Reactor Nginx Cloud Conmutador
 
 on:
-  workflow_dispatch: # Botón manual de PLAY en la web de GitHub
+  workflow_dispatch: # Botón manual de PLAY
+
+permissions:
+  contents: write
+  actions: write
 
 jobs:
-  streaming:
+  streaming_obs_cloud:
     runs-on: ubuntu-latest
     steps:
       - name: 🗄️ Clonando el búnker de archivos estáticos
         uses: actions/checkout@v4
 
-      - name: ⚙️ Instalando FFmpeg nativo por hardware en la nube
+      - name: ⚙️ Instalando herramientas y Servidor Nginx RTMP Industrial
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
-      - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
+          sudo apt-get install -y ffmpeg curl jq nginx libnginx-mod-rtmp
+
+      - name: 🛠️ Configurando el Cerebro de Conmutación de Nginx
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
+          # Fabricamos la configuración de Nginx al vuelo en el silicio cloud
+          sudo tee /etc/nginx/nginx.conf << 'EOF'
+          user www-data;
+          worker_processes auto;
+          pid /run/nginx.pid;
+          include /etc/nginx/modules-enabled/*.conf;
+
+          events {
+              worker_connections 768;
+          }
+
+          rtmp {
+              server {
+                  listen 1935;
+                  chunk_size 4000;
+
+                  application live {
+                      live on;
+                      record off;
+                      
+                      # El truco supremo: Permitimos que el alimentador pise el flujo de forma síncrona
+                      drop_idle_publisher 5s;
+                  }
+              }
+          }
+          EOF
+          
+          # Reiniciamos el servidor Nginx para que aplique las reglas de boxes
+          sudo systemctl restart nginx
+          echo "✅ Servidor Nginx-RTMP ONLINE en la nube esperando bits."
+
+      - name: 🚀 Encendiendo el Emisor Eterno y la Cañería de Alimentación Síncrona
+        run: |
           export TERM=xterm
           
           echo "Cargando..." > letrero.txt
           echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
           
-          URL_GIST_NOTICIAS="https://gist.githubusercontent.com/jav45dev-ctrl/c02c7fac36fde342f061b733231a5e6d/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/jav45dev-ctrl/c02c7fac36fde342f061b733231a5e6d/raw/playlist.txt"
-         
-          # ENROQUE: Eliminamos el bucle repetitivo de fondo. Lee el Gist una sola vez al principio y muere el proceso.
-          curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
-          echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # Lista de videos locales para concat
-          echo "# Lista de videos locales para concat" > playlist_local.txt
-          contador=1
-          
-          # Descargamos tus series del Ladrón al disco virtual a 100 MB/s (Inmune a los 2GB)
-          while read -r linea || [ -n "$linea" ]; do
-            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
-            
-            if [ -n "$URL_INTERNET" ]; then
-              echo "📥 Pre-descargando Tramo $contador de internet a la RAM: $URL_INTERNET"
-              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" \
-                   -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
-                   -o "local_part_${contador}.mp4" "$URL_INTERNET"
-              
-              echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
-              contador=$((contador + 1))
-            fi
-          done < grilla_cruda.txt
-          echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
-          PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
-          TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
-          
-          # [REPARADO]: Tu cuenta de TikTok blindada en comillas contra crasheos de Bash
-          echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
-          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
-          cat playlist_local.txt
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
-          
-          # 🧠 [REREACTOR DE AUDIO v3.1 - FILTRO DE INMUNIDAD ACÚSTICA ULTRA-LIMPIA]
-          # 1. pan=stereo... -> Cruza y desfasa levemente los canales de audio para romper la firma estéreo.
-          # 2. aeval=val(0)|val(1)... -> Mantiene las voces intactas sin deformación de velocidad.
-          # 3. Mantiene el hflip, hue=s=0.95 y rotate=0.03 en el video para mantener ciego el escáner visual.
-          # 🧠 [REREACTOR v716 - DIEGO ULTRA-LIGHT FIXED PERFORMANCE CORE]
-          # 1. Agregamos -threads 2 para forzar al contenedor a usar hilos paralelos reales.
-          # 2. Simplificamos el crop y scale para que el chip compute matrices pluma.
-          # 3. Mantenemos tus letreros dinámicos, el escudo anti-bot v3.1 de audio y la clave intacta.
-          ffmpeg -y \
-            -threads 2 \
-            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
-            -f concat -safe 0 \
-            -i playlist_local.txt \
-            -re -loop 1 -i plantilla_horizontal.png \
-            -filter_complex "[0:v]scale=1280:720,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=30:y=665:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
-            -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
+          echo "📡 [MUTINY TV] ENCIENDIENDO EL EMISOR ETERNO HACIA KICK (EL ESCUDO ONLINE)..."
+          # Este comando se queda chupando del Nginx local y emitiendo a Kick las 6 horas de corrido sin cerrarse jamás.
+          # Inyectamos tus filtros de audio v3.1 y visuales anti-DMCA moleculares de 0.01 grados.
+          ffmpeg -y -re -i rtmp://127.0.0.1/live/stream \
+            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -async 1 \
+            -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
             -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-            -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_MqGIuZCjdkwn_W8taony5k1gvPaCz1F7MWd2Rd0QAvb&passphrase=vrdzu5pih7bmRaVralELJ2wlBzrQPgsp08kGoZmPTKkqlkbN8CPzuUEYUtJU5ivRJE6nBqIOGPr2V1Q' || true
-          echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
+            -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_MqGIuZCjdkwn_W8taony5k1gvPaCz1F7MWd2Rd0QAvb&passphrase=vrdzu5pih7bmRaVralELJ2wlBzrQPgsp08kGoZmPTKkqlkbN8CPzuUEYUtJU5ivRJE6nBqIOGPr2V1Q' &
+          
+          # Dejamos que el emisor se estabilice 5 segundos escuchando la antena
+          sleep 5
+
+          echo "🪓 [MUTINY TV] INICIANDO EL BUCLE ALIMENTADOR POR CODIGO..."
+          contador=1
+          
+          # Recorremos tu Gist de órdenes
+          while read -r linea || [ -n "$linea" ]; do
+            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
+            NOMBRE_TRAMO=$(echo "$linea" | awk -F'|' '{print $2}' | tr -d ' ')
+            
+            if [ -n "$URL_INTERNET" ]; then
+              echo "------------------------------------------------------------"
+              echo "📥 INYECTANDO TRAMO N° $contador AL RECEPTOR NGINX: $NOMBRE_TRAMO"
+              echo "------------------------------------------------------------"
+              
+              # FFmpeg pluma descarga a 100 MB/s de internet y le escupe los fotogramas en caliente al Nginx local.
+              # Usamos el flag '-re' estricto para que alimente el servidor al ritmo exacto de reproducción (1.0x)
+              # para no saturar los timestamps del reloj.
+              ffmpeg -re -i "$URL_INTERNET" \
+                -c:v libx264 -preset ultrafast -b:v 2500k \
+                -c:a aac -b:a 128k -ar 44100 \
+                -f flv rtmp://127.0.0.1/live/stream || true
+                
+              echo "✅ Tramo N° $contador finalizado. Nginx reteniendo buffer... Pasando al siguiente."
+              contador=$((contador + 1))
+              sleep 2 # Colchón de respiro para que el multiplexor acomode el reloj
+            fi
+          done < grilla_cruda.txt
+
+          echo "🏁 [MUTINY TV] Toda la grilla fue emitida sin cortes de caño. Apagando satélite."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+     
