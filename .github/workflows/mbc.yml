@@ -1,4 +1,4 @@
-name: 📡 streamdromme
+name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -14,54 +14,73 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
+
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - ANDROID TV SMART SIMULATOR CORE]
           export TERM=xterm
           
           echo "Cargando..." > letrero.txt
           echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
           
+          # Tus rutas del nuevo Gist independiente de transmisión
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
-         
-          # ENROQUE: Eliminamos el bucle repetitivo de fondo. Lee el Gist una sola vez al principio y muere el proceso.
+                 
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # Lista de videos locales para concat
           echo "# Lista de videos locales para concat" > playlist_local.txt
           contador=1
           
-          # Descargamos tus series del Ladrón al disco virtual a 100 MB/s (Inmune a los 2GB)
+          # USER-AGENT PREMIUM: Simulamos ser un Android TV Sony Bravia con decodificación de hardware
+          UA_SMART_TV="Mozilla/5.0 (Linux; Android 10; Sony Bravia 4K UR3 Build/QTG1.200703.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+          
           while read -r linea || [ -n "$linea" ]; do
-            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
+            # Slicing molecular limpio respetando el orden exacto: URL | TITULO
+            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | sed 's/^[ \t]*//;s/[ \t]*$//')
+            TITULO_PELI=$(echo "$linea" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
             
             if [ -n "$URL_INTERNET" ]; then
-              echo "📥 Pre-descargando Tramo $contador de internet a la RAM: $URL_INTERNET"
-              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" \
-                   -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
+              echo "📥 Pre-descargando Tramo $contador [Smart TV Bypass]: ${TITULO_PELI:-Video}"
+              
+              # 🪓 CAMUFLAJE DE SMART TV: Metemos headers rígidos de Android TV y reintentos infinitos
+              # El flag --retry 5 y --retry-delay 3 evita que curl aborte si el servidor parpadea
+              curl -L -s --retry 5 --retry-delay 3 \
+                   -A "$UA_SMART_TV" \
+                   -H "X-Requested-With: com.sony.dtv.smartmedia" \
+                   -H "Accept: */*" \
                    -o "local_part_${contador}.mp4" "$URL_INTERNET"
               
-              echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
-              contador=$((contador + 1))
+              # Verificación estricta de que el caño bajó bits reales al disco virtual
+              if [ -s "local_part_${contador}.mp4" ]; then
+                echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
+                echo "✅ Tramo $contador listo en caché local."
+                contador=$((contador + 1))
+              else
+                echo "⚠️ [ERROR DE CONEXIÓN] Servidor IPTV rechazó el tramo $contador. Saltando..."
+                rm -f "local_part_${contador}.mp4"
+              fi
             fi
           done < grilla_cruda.txt
+          
           echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
           PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
           TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
           
-          # [REPARADO]: Tu cuenta de TikTok blindada en comillas contra crasheos de Bash
           echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
           echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
           
-          # 🧠 [REREACTOR DE AUDIO v3.1 - FILTRO DE INMUNIDAD ACÚSTICA ULTRA-LIMPIA]
-          # 1. pan=stereo... -> Cruza y desfasa levemente los canales de audio para romper la firma estéreo.
-          # 2. aeval=val(0)|val(1)... -> Mantiene las voces intactas sin deformación de velocidad.
-          # 3. Mantiene el hflip, hue=s=0.95 y rotate=0.03 en el video para mantener ciego el escáner visual.
+          # Si la lista quedó vacía por rebotadas de IP, frenamos el motor para no transmitir pantalla en negro
+          if [ ! -s "playlist_local.txt" ] || [ $(wc -l < playlist_local.txt) -eq 1 ]; then
+             echo "❌ Cañería de videos vacía. El servidor IPTV bloqueó todas las peticiones. Abortando emisión."
+             exit 1
+          fi
+          
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT HACIA KICK..."
+          
           ffmpeg -y \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
             -f concat -safe 0 \
@@ -72,6 +91,7 @@ jobs:
             -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
             -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_MqGIuZCjdkwn_W8taony5k1gvPaCz1F7MWd2Rd0QAvb&passphrase=vrdzu5pih7bmRaVralELJ2wlBzrQPgsp08kGoZmPTKkqlkbN8CPzuUEYUtJU5ivRJE6nBqIOGPr2V1Q' || true
+            
           echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
