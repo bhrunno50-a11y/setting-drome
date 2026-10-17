@@ -3,6 +3,10 @@ name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   streaming:
     runs-on: ubuntu-latest
@@ -17,7 +21,7 @@ jobs:
 
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - ANDROID TV SMART SIMULATOR CORE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - BYPASS TOTAL SIN PRE-DESCARGAS]
           export TERM=xterm
           
           echo "Cargando..." > letrero.txt
@@ -26,42 +30,21 @@ jobs:
           # Tus rutas del nuevo Gist independiente de transmisión
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
-                 
+          
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
-          echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
+          echo "📡 [MUTINY TV] SUCCIONANDO GRILLA DE ENLACES..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          echo "# Lista de videos locales para concat" > playlist_local.txt
-          contador=1
-          
-          # USER-AGENT PREMIUM: Simulamos ser un Android TV Sony Bravia con decodificación de hardware
-          UA_SMART_TV="Mozilla/5.0 (Linux; Android 10; Sony Bravia 4K UR3 Build/QTG1.200703.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+          # Fabricamos el archivo de playlist dinámico para el formato CONCAT de FFmpeg
+          echo "# Lista de flujos de red para concat" > playlist_local.txt
           
           while read -r linea || [ -n "$linea" ]; do
-            # Slicing molecular limpio respetando el orden exacto: URL | TITULO
+            # Separamos la URL limpia (el primer caño antes del '|')
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | sed 's/^[ \t]*//;s/[ \t]*$//')
-            TITULO_PELI=$(echo "$linea" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
             
             if [ -n "$URL_INTERNET" ]; then
-              echo "📥 Pre-descargando Tramo $contador [Smart TV Bypass]: ${TITULO_PELI:-Video}"
-              
-              # 🪓 CAMUFLAJE DE SMART TV: Metemos headers rígidos de Android TV y reintentos infinitos
-              # El flag --retry 5 y --retry-delay 3 evita que curl aborte si el servidor parpadea
-              curl -L -s --retry 5 --retry-delay 3 \
-                   -A "$UA_SMART_TV" \
-                   -H "X-Requested-With: com.sony.dtv.smartmedia" \
-                   -H "Accept: */*" \
-                   -o "local_part_${contador}.mp4" "$URL_INTERNET"
-              
-              # Verificación estricta de que el caño bajó bits reales al disco virtual
-              if [ -s "local_part_${contador}.mp4" ]; then
-                echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
-                echo "✅ Tramo $contador listo en caché local."
-                contador=$((contador + 1))
-              else
-                echo "⚠️ [ERROR DE CONEXIÓN] Servidor IPTV rechazó el tramo $contador. Saltando..."
-                rm -f "local_part_${contador}.mp4"
-              fi
+              # Inyectamos la URL de internet directo en la lista de reproducción de FFmpeg
+              echo "file '$URL_INTERNET'" >> playlist_local.txt
             fi
           done < grilla_cruda.txt
           
@@ -70,18 +53,16 @@ jobs:
           TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
           
           echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
-          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
+          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA DE REPRODUCCIÓN EN DIRECTO:"
           cat playlist_local.txt
           
-          # Si la lista quedó vacía por rebotadas de IP, frenamos el motor para no transmitir pantalla en negro
-          if [ ! -s "playlist_local.txt" ] || [ $(wc -l < playlist_local.txt) -eq 1 ]; then
-             echo "❌ Cañería de videos vacía. El servidor IPTV bloqueó todas las peticiones. Abortando emisión."
-             exit 1
-          fi
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DIRECTO A KICK..."
           
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT HACIA KICK..."
-          
+          # 🧠 [REREACTOR DE AUDIO v3.1 - FILTRO DE INMUNIDAD ACÚSTICA ULTRA-LIMPIA]
+          # Metemos las banderas de reconexión directo al concat para digerir los micro-cortes del IPTV en vivo.
           ffmpeg -y \
+            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
+            -headers "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
             -f concat -safe 0 \
             -i playlist_local.txt \
