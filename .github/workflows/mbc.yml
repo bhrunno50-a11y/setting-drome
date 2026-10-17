@@ -3,10 +3,6 @@ name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
 
-permissions:
-  contents: write
-  actions: write
-
 jobs:
   streaming:
     runs-on: ubuntu-latest
@@ -18,51 +14,55 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
-
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - BYPASS TOTAL SIN PRE-DESCARGAS]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
           export TERM=xterm
           
           echo "Cargando..." > letrero.txt
           echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
           
-          # Tus rutas del nuevo Gist independiente de transmisión
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
-          
+         
+          # ENROQUE: Eliminamos el bucle repetitivo de fondo. Lee el Gist una sola vez al principio y muere el proceso.
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
-          echo "📡 [MUTINY TV] SUCCIONANDO GRILLA DE ENLACES..."
+          echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # Fabricamos el archivo de playlist dinámico para el formato CONCAT de FFmpeg
-          echo "# Lista de flujos de red para concat" > playlist_local.txt
+          # Lista de videos locales para concat
+          echo "# Lista de videos locales para concat" > playlist_local.txt
+          contador=1
           
+          # Descargamos tus series del Ladrón al disco virtual a 100 MB/s (Inmune a los 2GB)
           while read -r linea || [ -n "$linea" ]; do
-            # Separamos la URL limpia (el primer caño antes del '|')
-            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | sed 's/^[ \t]*//;s/[ \t]*$//')
+            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
             
             if [ -n "$URL_INTERNET" ]; then
-              # Inyectamos la URL de internet directo en la lista de reproducción de FFmpeg
-              echo "file '$URL_INTERNET'" >> playlist_local.txt
+              echo "📥 Pre-descargando Tramo $contador de internet a la RAM: $URL_INTERNET"
+              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" \
+                   -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
+                   -o "local_part_${contador}.mp4" "$URL_INTERNET"
+              
+              echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
+              contador=$((contador + 1))
             fi
           done < grilla_cruda.txt
-          
           echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
           PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
           TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
           
+          # [REPARADO]: Tu cuenta de TikTok blindada en comillas contra crasheos de Bash
           echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
-          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA DE REPRODUCCIÓN EN DIRECTO:"
+          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
-          
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DIRECTO A KICK..."
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
           
           # 🧠 [REREACTOR DE AUDIO v3.1 - FILTRO DE INMUNIDAD ACÚSTICA ULTRA-LIMPIA]
-          # Metemos las banderas de reconexión directo al concat para digerir los micro-cortes del IPTV en vivo.
+          # 1. pan=stereo... -> Cruza y desfasa levemente los canales de audio para romper la firma estéreo.
+          # 2. aeval=val(0)|val(1)... -> Mantiene las voces intactas sin deformación de velocidad.
+          # 3. Mantiene el hflip, hue=s=0.95 y rotate=0.03 en el video para mantener ciego el escáner visual.
           ffmpeg -y \
-            -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-            -headers "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
             -f concat -safe 0 \
             -i playlist_local.txt \
@@ -72,7 +72,6 @@ jobs:
             -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
             -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_MqGIuZCjdkwn_W8taony5k1gvPaCz1F7MWd2Rd0QAvb&passphrase=vrdzu5pih7bmRaVralELJ2wlBzrQPgsp08kGoZmPTKkqlkbN8CPzuUEYUtJU5ivRJE6nBqIOGPr2V1Q' || true
-            
           echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
