@@ -54,27 +54,25 @@ jobs:
           
           echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
           
-          # 🎛️ [DEMONIO ASÍNCRONO DEL CHAT - INYECCIÓN PLANIFICADA A UN SEGUNDO]
-          # Este bucle calcula el tiempo estimado de desfile del texto (aprox 15-20 seg por frase).
-          # Duerme de largo para no generar bucles infinitos de red y se despierta un segundo antes de mutar el letrero.
+               # 🎛️ [DEMONIO ASÍNCRONO DEL CHAT - INYECCIÓN PLANIFICADA A UN SEGUNDO]
           (
             while true; do
-              sleep 18 # Espera la mayor parte del recorrido del letrero inferior
+              sleep 18
               
-              # Aquí puedes usar tu endpoint de chat de Kick. Extraemos el último renglón disponible.
+              # Consulta limpia a la API de mensajes públicos de tu chat
               ULTIMO_MENSAJE=$(curl -s "https://kick.com/api/v2/channels/streamdrome/messages" | jq -r '.data.messages[0].content' 2>/dev/null | tr -d '\r\n')
               
-              # Si la API pública no devuelve texto por protección contra bots o está vacío, recae sobre tu letrero base del Gist
+              # Filtro rígido sin comillas anidadas peligrosas
               if [ -z "$ULTIMO_MENSAJE" ] || [ "$ULTIMO_MENSAJE" = "null" ]; then
                 ULTIMO_MENSAJE=$(curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n')
               fi
               
-              # Inyección limpia en caliente: FFmpeg leerá el cambio al instante del reinicio del bucle del drawtext
-              echo "💬 Último Chat: ${ULTIMO_MENSAJE:-🍿 streamdrome.surge.sh" > abajo.txt
-              sleep 2 # Margen de amortiguación antes de la siguiente vuelta
+              # Remache limpio de inyección en caliente
+              echo "Chat: $ULTIMO_MENSAJE" > abajo.txt
+              sleep 2
             done
           ) &
-          
+                        
           echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
           echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT CON TICKER DINÁMICO..."
