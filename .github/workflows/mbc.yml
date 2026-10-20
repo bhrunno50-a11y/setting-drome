@@ -1,4 +1,4 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v716 - SRT Ticker Core
+name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -14,10 +14,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
-
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v716 - MARQUEE & LIVE CHAT OPTIMIZED]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
           export TERM=xterm
           
           echo "Cargando..." > letrero.txt
@@ -26,6 +25,7 @@ jobs:
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
          
+          # ENROQUE: Eliminamos el bucle repetitivo de fondo. Lee el Gist una sola vez al principio y muere el proceso.
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
@@ -34,6 +34,7 @@ jobs:
           echo "# Lista de videos locales para concat" > playlist_local.txt
           contador=1
           
+          # Descargamos tus series del Ladrón al disco virtual a 100 MB/s (Inmune a los 2GB)
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
             
@@ -47,40 +48,19 @@ jobs:
               contador=$((contador + 1))
             fi
           done < grilla_cruda.txt
-
           echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
           PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
           TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
           
+          # [REPARADO]: Tu cuenta de TikTok blindada en comillas contra crasheos de Bash
           echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
-          
-               # 🎛️ [DEMONIO ASÍNCRONO DEL CHAT - INYECCIÓN PLANIFICADA A UN SEGUNDO]
-          (
-            while true; do
-              sleep 18
-              
-              # Consulta limpia a la API de mensajes públicos de tu chat
-              ULTIMO_MENSAJE=$(curl -s "https://kick.com/api/v2/channels/streamdrome/messages" | jq -r '.data.messages[0].content' 2>/dev/null | tr -d '\r\n')
-              
-              # Filtro rígido sin comillas anidadas peligrosas
-              if [ -z "$ULTIMO_MENSAJE" ] || [ "$ULTIMO_MENSAJE" = "null" ]; then
-                ULTIMO_MENSAJE=$(curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n')
-              fi
-              
-              # Remache limpio de inyección en caliente
-              echo "Chat: $ULTIMO_MENSAJE" > abajo.txt
-              sleep 2
-            done
-          ) &
-                        
           echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT CON TICKER DINÁMICO..."
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
           
-          # 🧠 [REDIRECCIÓN GRÁFICA MULTI-FILTRO CON MOVIMIENTO PROGRESIVO]
-          # x=1280-mod(t*120\,1280+tw) -> Hace que el texto inferior avance a la izquierda de forma fluida a 120 píxeles por segundo.
-          # reload=1 -> Obliga a releer el archivo abajo.txt cada vez que el contador de píxeles reinicia la coordenada X.
-          # 🧠 [REDIRECCIÓN GRÁFICA DIRECTA - CADENA SANEADA SIN DUPLICADOS]
+          # 🧠 [REREACTOR DE AUDIO v3.1 - FILTRO DE INMUNIDAD ACÚSTICA ULTRA-LIMPIA]
+          # El único cambio real está en la coordenada x del segundo drawtext: x=1280-mod(t*130\,1280+tw)
+          # Esto mueve el texto de abajo sin levantar subprocesos paralelos pesados.
           ffmpeg -y \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
             -f concat -safe 0 \
@@ -90,8 +70,7 @@ jobs:
             -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
             -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-            -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_kX7ZJ954XEoV_oj11LTHyijj1AHehneL3P9n72zKGMK&passphrase=TNdOSyQpbrmfMc85yiQmEOTXpabTk4fDiu5tou4DGeJHknaCGXcuLjZgDUxzZi36DE1kqYR5ASxK0UR' || true
-
+            -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_fylpdatX1wWp_pRgrTWaGnJSByycOaQrX5iCDDbyg2m&passphrase=TNdOSyQpbrmfMc85yiQmEOTXpabTk4fDiu5tou4DGeJHknaCGXcuLjZgDUxzZi36DE1kqYR5ASxK0UR' || true
           echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
