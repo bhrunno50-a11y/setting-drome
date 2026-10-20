@@ -1,4 +1,4 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
+name: 📡 Mutiny TV IPTV Pirate Engine v716 - SRT Ticker Core
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -14,9 +14,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
+
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v716 - MARQUEE & LIVE CHAT OPTIMIZED]
           export TERM=xterm
           
           echo "Cargando..." > letrero.txt
@@ -25,7 +26,6 @@ jobs:
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
          
-          # ENROQUE: Eliminamos el bucle repetitivo de fondo. Lee el Gist una sola vez al principio y muere el proceso.
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
@@ -34,7 +34,6 @@ jobs:
           echo "# Lista de videos locales para concat" > playlist_local.txt
           contador=1
           
-          # Descargamos tus series del Ladrón al disco virtual a 100 MB/s (Inmune a los 2GB)
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
             
@@ -48,31 +47,52 @@ jobs:
               contador=$((contador + 1))
             fi
           done < grilla_cruda.txt
+
           echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
           PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
           TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
           
-          # [REPARADO]: Tu cuenta de TikTok blindada en comillas contra crasheos de Bash
           echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
+          
+          # 🎛️ [DEMONIO ASÍNCRONO DEL CHAT - INYECCIÓN PLANIFICADA A UN SEGUNDO]
+          # Este bucle calcula el tiempo estimado de desfile del texto (aprox 15-20 seg por frase).
+          # Duerme de largo para no generar bucles infinitos de red y se despierta un segundo antes de mutar el letrero.
+          (
+            while true; do
+              sleep 18 # Espera la mayor parte del recorrido del letrero inferior
+              
+              # Aquí puedes usar tu endpoint de chat de Kick. Extraemos el último renglón disponible.
+              ULTIMO_MENSAJE=$(curl -s "https://kick.com/api/v2/channels/streamdrome/messages" | jq -r '.data.messages[0].content' 2>/dev/null | tr -d '\r\n')
+              
+              # Si la API pública no devuelve texto por protección contra bots o está vacío, recae sobre tu letrero base del Gist
+              if [ -z "$ULTIMO_MENSAJE" ] || [ "$ULTIMO_MENSAJE" = "null" ]; then
+                ULTIMO_MENSAJE=$(curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n')
+              fi
+              
+              # Inyección limpia en caliente: FFmpeg leerá el cambio al instante del reinicio del bucle del drawtext
+              echo "💬 Último Chat: ${ULTIMO_MENSAJE:-🍿 streamdrome.surge.sh" > abajo.txt
+              sleep 2 # Margen de amortiguación antes de la siguiente vuelta
+            done
+          ) &
+          
           echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT CON TICKER DINÁMICO..."
           
-          # 🧠 [REREACTOR DE AUDIO v3.1 - FILTRO DE INMUNIDAD ACÚSTICA ULTRA-LIMPIA]
-          # 1. pan=stereo... -> Cruza y desfasa levemente los canales de audio para romper la firma estéreo.
-          # 2. aeval=val(0)|val(1)... -> Mantiene las voces intactas sin deformación de velocidad.
-          # 3. Mantiene el hflip, hue=s=0.95 y rotate=0.015 en el video para mantener ciego el escáner visual.
+          # 🧠 [REDIRECCIÓN GRÁFICA MULTI-FILTRO CON MOVIMIENTO PROGRESIVO]
+          # x=1280-mod(t*120\,1280+tw) -> Hace que el texto inferior avance a la izquierda de forma fluida a 120 píxeles por segundo.
+          # reload=1 -> Obliga a releer el archivo abajo.txt cada vez que el contador de píxeles reinicia la coordenada X.
           ffmpeg -y \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
             -f concat -safe 0 \
             -i playlist_local.txt \
             -re -loop 1 -i plantilla_horizontal.png \
-            -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.02:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=30:y=665:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
+            -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.02:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
             -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
             -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
             -f mpegts 'srt://fa723fc1b171.srt.live-video.net:9000?streamid=sk_us-west-2_kX7ZJ954XEoV_oj11LTHyijj1AHehneL3P9n72zKGMK&passphrase=TNdOSyQpbrmfMc85yiQmEOTXpabTk4fDiu5tou4DGeJHknaCGXcuLjZgDUxzZi36DE1kqYR5ASxK0UR' || true
+          
           echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
