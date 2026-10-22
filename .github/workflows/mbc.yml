@@ -53,10 +53,26 @@ jobs:
           ) &
           PID_OSCILADOR=$!
           
-          echo "# Lista Dinámica Estabilizada" > playlist_estable.txt
+            # =========================================================================
+          # 🌪️ CREACIÓN DE LA TUBERÍA INTERNA UNIFICADA (Anti-Baches de Kick)
+          # =========================================================================
+          rm -f puente_stream
+          mkfifo puente_stream
+
+          # 🔥 EL EMISOR FIJO MAESTRO (Un solo proceso absoluto hacia Kick)
+          # Procesa la marquesina en movimiento de forma ultra fluida a 30 FPS constantes.
+          ffmpeg -y -re -i puente_stream \
+            -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
+            -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
+            -map "[canvas_fusionado]" -map 0:a:0? \
+            -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+            -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
+            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
+            -flvflags no_duration_filesize \
+            -f mpegts "${{ secrets.KICK_RTMP_URL }}" &
           
+          PID_MAESTRO=$!
           contador=1
-          MAESTRO_ENCENDIDO=0
           
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
@@ -69,40 +85,17 @@ jobs:
             if [ -n "$URL_INTERNET" ]; then
               FILE_READY="ready_part_${contador}.mp4"
               
-              echo "📥 [TRAMO $contador] Descargando de HDFull: $TITULO_PELI"
+              echo "📥 [TRAMO $contador] Succionando desde GitHub Releases: $TITULO_PELI"
               curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" </dev/null \
                        -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
                        -o "$FILE_READY" "$URL_INTERNET"
               
-              echo "file '$FILE_READY'" > playlist_estable.txt
-              
-              # Fijo el título que querés para la miniserie en el letrero verde superior
+              # Actualizamos los letreros informativos antes de mandar el video al aire
               echo "Ahora en Vivo: $TITULO_PELI" > letrero.txt
               
-              # =========================================================================
-              # 🔥 EL EMISOR FIJO CRÍTICO (Transmisión continua a Kick)
-              # =========================================================================
-              if [ $MAESTRO_ENCENDIDO -eq 0 ]; then
-                echo "📡 [MUTINY TV] ENCIENDIENDO EMISIÓN LINEAL PERMANENTE..."
-                ffmpeg -y -re -stream_loop -1 -f concat -safe 0 -i playlist_estable.txt \
-                  -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
-                  -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
-                  -map "[canvas_fusionado]" -map 0:a:0? \
-                  -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
-                  -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-                  -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
-                  -flvflags no_duration_filesize \
-                  -f mpegts "${{ secrets.KICK_SRT_URL }}" &
-                
-                PID_MAESTRO=$!
-                MAESTRO_ENCENDIDO=1
-                sleep 2
-              fi
-              
-              DURACION_SEG=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$FILE_READY" | awk '{print int($1)}')
-              echo "⏱️ Transmitiendo durante ${DURACION_SEG} segundos reales..."
-              
-              sleep "$DURACION_SEG"
+              echo "🚀 Inyectando $TITULO_PELI al canal de transmisión..."
+              # Empujamos el video de forma secuencial sin recodificar (-c copy no consume CPU)
+              ffmpeg -i "$FILE_READY" -c copy -f mpegts -fflags +genpts puente_stream
               
               rm -f "$FILE_READY"
               contador=$((contador + 1))
@@ -111,11 +104,8 @@ jobs:
 
           echo "🏁 Maratón completada. Bajando palanca de los motores..."
           kill $PID_OSCILADOR 2>/dev/null || true
-          if [ $MAESTRO_ENCENDIDO -eq 1 ]; then
-            kill $PID_MAESTRO
-          fi
+          kill $PID_MAESTRO 2>/dev/null || true
+          rm -f puente_stream
           echo "🏁 Satélite apagado de forma limpia."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-         
