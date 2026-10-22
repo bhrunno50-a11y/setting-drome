@@ -14,6 +14,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
+
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
           # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
@@ -24,37 +25,25 @@ jobs:
           
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
-                  
-          # Descargamos las noticias completas a un archivo local
-          echo "📡 [MUTINY TV] SUCCIONANDO NOTICIAS PARA ROTACIÓN..."
-          curl -s "$URL_GIST_NOTICIAS" > noticias_completas.txt
-          
-          # Extraemos renglón 1 y renglón 2 limpiando espacios raros
-          RE_1=$(sed -n '1p' noticias_completas.txt | tr -d '\r\n')
-          RE_2=$(sed -n '2p' noticias_completas.txt | tr -d '\r\n')
-
-          # 🔄 BUCLE EN SEGUNDO PLANO: Cambia el texto cada 15 segundos
-          (
-            while true; do
-              echo "$RE_1" > abajo.txt
-              sleep 15
-              echo "$RE_2" > abajo.txt
-              sleep 15
-            done
-          ) & PIDS_BUCLE=$!
-
+         
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # Lista de videos locales para concat
+          # [SOLUCIÓN CONTROL DE DAÑOS]: Sanitización de textos para prevenir roturas en drawtext
+          curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo_crudo.txt
+          # Escapamos comillas y caracteres raros reemplazándolos de forma segura para FFmpeg
+          cat abajo_crudo.txt | sed "s/'//g" | sed 's/!//g' > abajo.txt
+
+          # Preparación del archivo de concatenación local
           echo "# Lista de videos locales para concat" > playlist_local.txt
           contador=1
           
+          # Descarga veloz saltando el límite de 2GB al disco de la máquina virtual
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
             
             if [ -n "$URL_INTERNET" ]; then
-              echo "📥 Pre-descargando Tramo $contador de internet a la RAM: $URL_INTERNET"
+              echo "📥 Pre-descargando Tramo $contador de internet: $URL_INTERNET"
               curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" \
                    -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
                    -o "local_part_${contador}.mp4" "$URL_INTERNET"
@@ -68,26 +57,30 @@ jobs:
           PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
           TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
           
-          echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
+          # Sanitizamos el título inicial contra caracteres especiales del sistema
+          echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" | sed "s/'//g" | sed 's/!//g' > letrero.txt
+          
           echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN DE TRACCIÓN ESTABLE..."
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
           
-          # 🎥 FFMPEG CON FILTROS SEPARADOS CORRECTAMENTE
-          # Se corrigió la sintaxis: ',fps=30,format=yuv420p' para estabilizar los tiempos del texto animado.
+          # Generación automática de un fondo oscuro si no existe la plantilla horizontal
+          if [ ! -f plantilla_horizontal.png ]; then
+            ffmpeg -f lavfi -i color=c=black:s=1280x720:d=1 -vframes 1 plantilla_horizontal.png
+          fi
+
+          # 🧠 [REREACTOR DE VIDEO & AUDIO v715 - CORRECCIÓN MARQUESINA MÓVIL]
           ffmpeg -y \
-            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
-            -f concat -safe 0 \
-            -i playlist_local.txt \
-            -re -loop 1 -i plantilla_horizontal.png \
-            -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black,fps=30,format=yuv420p[peli_expandida]; [1:v]scale=1280:720,fps=30,format=yuv420p[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x='w-mod(t*65, w+tw)':y=685:fontsize=28:fontcolor=white:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
-            -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
-            -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
-            -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-            -flvflags no_duration_filesize -f flv "${{ secrets.KICK_SRT_URL }}" || true
-          
-          # Apagamos el bucle de texto al terminar el directo
-          kill $PIDS_BUCLE 2>/dev/null || true
+          -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
+          -f concat -safe 0 \
+          -i playlist_local.txt \
+          -re -loop 1 -i plantilla_horizontal.png \
+          -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=w-mod(t*120\,w+tw):y=665:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
+          -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+          -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
+          -f mpegts "${{ secrets.KICK_SRT_URL }}" || true
+
           echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
-
-
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
