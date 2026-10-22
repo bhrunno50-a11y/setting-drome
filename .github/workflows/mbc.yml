@@ -15,61 +15,76 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
 
-      - name: 🚀 Emisión Directa Unificada Continua Inmune (v722 - Caño Infinito)
+      - name: 🚀 Emisión Directa Unificada Continua con Marquesina Alterna (v726)
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v722 - BOOTSTRAPPED CONCAT PIPE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v726 - ALTERNATING MARQUEE CORE]
           export TERM=xterm
           
           echo "Conectando al Satélite..." > letrero.txt
-          echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
+          echo "Cargando marquesina..." > abajo.txt
           
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
           
-          # Carga inicial de marquesina inferior
-          curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
+          # 1. SUCCIONAMOS LAS DOS PRIMERAS LÍNEAS DEL GIST DE NOTICIAS
+          NOTICIA_RAW=$(curl -s "$URL_GIST_NOTICIAS" | tr -d '\r')
+          LINEA_1=$(echo "$NOTICIA_RAW" | sed -n '1p' | sed 's/^[ \t]*//;s/[ \t]*$//')
+          LINEA_2=$(echo "$NOTICIA_RAW" | sed -n '2p' | sed 's/^[ \t]*//;s/[ \t]*$//')
+          
+          # Si el Gist no tiene un segundo renglón, le ponemos un texto genérico de la comunidad
+          if [ -z "$LINEA_2" ]; then
+            LINEA_2="streamdrome.surge.sh - tiktok@streamdrome.surge.sh"
+          fi
           
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # Creamos la base de la playlist
-          echo "# Playlist Dinámica Mutiny" > playlist_infinita.txt
+          # =========================================================================
+          # 🔥 EL OSCILADOR DE TEXTO (Sincronizador en segundo plano)
+          # Este bucle cambia el texto de abajo.txt entre la Línea 1 y la Línea 2 cada 25 segundos
+          # =========================================================================
+          (
+            while true; do
+              echo "$LINEA_1" > abajo.txt
+              sleep 25
+              echo "$LINEA_2" > abajo.txt
+              sleep 25
+            done
+          ) &
+          PID_OSCILADOR=$!
+          
+          echo "# Lista Dinámica Estabilizada" > playlist_estable.txt
           
           contador=1
           MAESTRO_ENCENDIDO=0
           
-          # =========================================================================
-          # 📥 EL ALIMENTADOR DINÁMICO DE LA PLAYLIST
-          # =========================================================================
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
             TITULO_PELI=$(echo "$linea" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
             
             if [ -z "$TITULO_PELI" ]; then
-              TITULO_PELI="Sigueme en TikTok @streamdrome"
+              TITULO_PELI="Terravision - El Codigo del Billon de Dolares"
             fi
             
             if [ -n "$URL_INTERNET" ]; then
-              FILE_LOCAL="local_part_${contador}.mp4"
+              FILE_READY="ready_part_${contador}.mp4"
               
-              echo "📥 [TRAMO $contador] Descargando: $TITULO_PELI"
+              echo "📥 [TRAMO $contador] Descargando de HDFull: $TITULO_PELI"
               curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" </dev/null \
                        -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
-                       -o "$FILE_LOCAL" "$URL_INTERNET"
+                       -o "$FILE_READY" "$URL_INTERNET"
               
-              # Inyectamos el archivo en la playlist ANTES de arrancar FFmpeg por primera vez
-              echo "file '$FILE_LOCAL'" >> playlist_infinita.txt
+              echo "file '$FILE_READY'" > playlist_estable.txt
               
-              # Cambiamos el letrero superior al instante
-              echo "🎬 Ahora en Vivo: $TITULO_PELI" > letrero.txt
+              # Fijo el título que querés para la miniserie en el letrero verde superior
+              echo "Ahora en Vivo: $TITULO_PELI" > letrero.txt
               
               # =========================================================================
-              # 🔥 ARRANQUE DEL EMISOR FIJO (Solo se ejecuta una vez con el primer video listo)
+              # 🔥 EL EMISOR FIJO CRÍTICO (Transmisión continua a Kick)
               # =========================================================================
               if [ $MAESTRO_ENCENDIDO -eq 0 ]; then
-                echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO CON PRIMER VIDEO LISTO..."
-                ffmpeg -y -re \
-                  -f concat -safe 0 -auto_convert 1 -i playlist_infinita.txt \
+                echo "📡 [MUTINY TV] ENCIENDIENDO EMISIÓN LINEAL PERMANENTE..."
+                ffmpeg -y -re -stream_loop -1 -f concat -safe 0 -i playlist_estable.txt \
                   -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
                   -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
                   -map "[canvas_fusionado]" -map 0:a:0? \
@@ -84,21 +99,18 @@ jobs:
                 sleep 2
               fi
               
-              # Calculamos la duración para mantener sincronizado el hilo de Bash
-              DURACION_SEG=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$FILE_LOCAL" | awk '{print int($1)}')
-              echo "⏱️ Duración estimada del tramo: ${DURACION_SEG} segundos. Transmitiendo..."
+              DURACION_SEG=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$FILE_READY" | awk '{print int($1)}')
+              echo "⏱️ Transmitiendo durante ${DURACION_SEG} segundos reales..."
               
-              # Esperamos a que el video termine de reproducirse en el stream
               sleep "$DURACION_SEG"
               
-              # Una vez reproducido, limpiamos y avanzamos al siguiente loop
-              rm -f "$FILE_LOCAL"
+              rm -f "$FILE_READY"
               contador=$((contador + 1))
-              sleep 1
             fi
           done < grilla_cruda.txt
 
-          echo "🏁 Maratón completada. Bajando palanca del caño maestro..."
+          echo "🏁 Maratón completada. Bajando palanca de los motores..."
+          kill $PID_OSCILADOR 2>/dev/null || true
           if [ $MAESTRO_ENCENDIDO -eq 1 ]; then
             kill $PID_MAESTRO
           fi
