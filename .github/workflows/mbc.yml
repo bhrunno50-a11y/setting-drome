@@ -53,25 +53,6 @@ jobs:
           ) &
           PID_OSCILADOR=$!
           
-            # =========================================================================
-          # 🌪️ CREACIÓN DE LA TUBERÍA INTERNA UNIFICADA (Anti-Baches de Kick)
-          # =========================================================================
-          rm -f puente_stream
-          mkfifo puente_stream
-
-          # 🔥 EL EMISOR FIJO MAESTRO (Un solo proceso absoluto hacia Kick)
-          # Procesa la marquesina en movimiento de forma ultra fluida a 30 FPS constantes.
-          ffmpeg -y -re -i puente_stream \
-            -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
-            -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
-            -map "[canvas_fusionado]" -map 0:a:0? \
-            -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
-            -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
-            -flvflags no_duration_filesize \
-            -f mpegts "${{ secrets.KICK_RTMP_URL }}" &
-          
-          PID_MAESTRO=$!
           contador=1
           
           while read -r linea || [ -n "$linea" ]; do
@@ -85,17 +66,27 @@ jobs:
             if [ -n "$URL_INTERNET" ]; then
               FILE_READY="ready_part_${contador}.mp4"
               
-              echo "📥 [TRAMO $contador] Succionando desde GitHub Releases: $TITULO_PELI"
+              echo "📥 [TRAMO $contador] Descargando desde GitHub Releases: $TITULO_PELI"
               curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" </dev/null \
                        -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
                        -o "$FILE_READY" "$URL_INTERNET"
               
-              # Actualizamos los letreros informativos antes de mandar el video al aire
+              # Fijamos los letreros informativos
               echo "Ahora en Vivo: $TITULO_PELI" > letrero.txt
               
-              echo "🚀 Inyectando $TITULO_PELI al canal de transmisión..."
-              # Empujamos el video de forma secuencial sin recodificar (-c copy no consume CPU)
-              ffmpeg -i "$FILE_READY" -c copy -f mpegts -fflags +genpts puente_stream
+              echo "🚀 Transmitiendo $TITULO_PELI de forma directa a Kick..."
+              # =========================================================================
+              # 🔥 EMISOR LINEAL OPTIMIZADO (Procesamiento unificado de alta velocidad)
+              # =========================================================================
+              ffmpeg -y -re -i "$FILE_READY" \
+                -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,hue=s=0.95,rotate=0.01:c=black:ow=1280:oh=720,drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4" \
+                -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
+                -map 0:v -map 0:a:0? \
+                -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+                -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
+                -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
+                -flvflags no_duration_filesize \
+                -f mpegts "${{ secrets.KICK_RTMP_URL }}"
               
               rm -f "$FILE_READY"
               contador=$((contador + 1))
@@ -104,8 +95,8 @@ jobs:
 
           echo "🏁 Maratón completada. Bajando palanca de los motores..."
           kill $PID_OSCILADOR 2>/dev/null || true
-          kill $PID_MAESTRO 2>/dev/null || true
-          rm -f puente_stream
           echo "🏁 Satélite apagado de forma limpia."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        
