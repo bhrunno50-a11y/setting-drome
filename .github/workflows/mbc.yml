@@ -1,4 +1,4 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v722 - SRT Sync Core Fixed
+name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -14,89 +14,80 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
-
-      - name: 🚀 Emisión Directa Unificada Continua con Marquesina Alterna (v726)
+      - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v726 - ALTERNATING MARQUEE CORE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
           export TERM=xterm
           
-          echo "Conectando al Satélite..." > letrero.txt
-          echo "Cargando marquesina..." > abajo.txt
+          echo "Cargando..." > letrero.txt
+          echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
           
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
+         
+          # Descargamos las noticias completas a un archivo local
+          echo "📡 [MUTINY TV] SUCCIONANDO NOTICIAS PARA ROTACIÓN..."
+          curl -s "$URL_GIST_NOTICIAS" > noticias_completas.txt
           
-          # 1. SUCCIONAMOS LAS DOS PRIMERAS LÍNEAS DEL GIST DE NOTICIAS
-          NOTICIA_RAW=$(curl -s "$URL_GIST_NOTICIAS" | tr -d '\r')
-          LINEA_1=$(echo "$NOTICIA_RAW" | sed -n '1p' | sed 's/^[ \t]*//;s/[ \t]*$//')
-          LINEA_2=$(echo "$NOTICIA_RAW" | sed -n '2p' | sed 's/^[ \t]*//;s/[ \t]*$//')
-          
-          # Si el Gist no tiene un segundo renglón, le ponemos un texto genérico de la comunidad
-          if [ -z "$LINEA_2" ]; then
-            LINEA_2="streamdrome.surge.sh - tiktok@streamdrome.surge.sh"
-          fi
-          
+          # Extraemos renglón 1 y renglón 2 limpiando espacios raros
+          RE_1=$(sed -n '1p' noticias_completas.txt | tr -d '\r\n')
+          RE_2=$(sed -n '2p' noticias_completas.txt | tr -d '\r\n')
+
+          # 🔄 BUCLE EN SEGUNDO PLANO: Cambia el texto cada 15 segundos (Renglón 1 -> Renglón 2 -> Renglón 1...)
+          (
+            while true; do
+              echo "$RE_1" > abajo.txt
+              sleep 15
+              echo "$RE_2" > abajo.txt
+              sleep 15
+            done
+          ) & PIDS_BUCLE=$!
+
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # =========================================================================
-          # 🔥 EL OSCILADOR DE TEXTO (Sincronizador en segundo plano)
-          # Este bucle cambia el texto de abajo.txt entre la Línea 1 y la Línea 2 cada 25 segundos
-          # =========================================================================
-          (
-            while true; do
-              echo "$LINEA_1" > abajo.txt
-              sleep 25
-              echo "$LINEA_2" > abajo.txt
-              sleep 25
-            done
-          ) &
-          PID_OSCILADOR=$!
-          
+          # Lista de videos locales para concat
+          echo "# Lista de videos locales para concat" > playlist_local.txt
           contador=1
           
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
-            TITULO_PELI=$(echo "$linea" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
-            
-            if [ -z "$TITULO_PELI" ]; then
-              TITULO_PELI="Terravision - El Codigo del Billon de Dolares"
-            fi
             
             if [ -n "$URL_INTERNET" ]; then
-              FILE_READY="ready_part_${contador}.mp4"
+              echo "📥 Pre-descargando Tramo $contador de internet a la RAM: $URL_INTERNET"
+              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" \
+                   -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
+                   -o "local_part_${contador}.mp4" "$URL_INTERNET"
               
-              echo "📥 [TRAMO $contador] Descargando desde GitHub Releases: $TITULO_PELI"
-              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" </dev/null \
-                       -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
-                       -o "$FILE_READY" "$URL_INTERNET"
-              
-              # Fijamos los letreros informativos
-              echo "Ahora en Vivo: $TITULO_PELI" > letrero.txt
-              
-              echo "🚀 Transmitiendo $TITULO_PELI de forma directa a Kick..."
-              # =========================================================================
-              # 🔥 EMISOR LINEAL OPTIMIZADO (Procesamiento unificado de alta velocidad)
-              # =========================================================================
-              ffmpeg -y -re -i "$FILE_READY" \
-                -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,hue=s=0.95,rotate=0.01:c=black:ow=1280:oh=720,drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4" \
-                -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
-                -map 0:v -map 0:a:0? \
-                -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
-                -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-                -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
-                -flvflags no_duration_filesize \
-                -f mpegts "${{ secrets.KICK_RTMP_URL }}"
-              
-              rm -f "$FILE_READY"
+              echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
               contador=$((contador + 1))
             fi
           done < grilla_cruda.txt
 
-          echo "🏁 Maratón completada. Bajando palanca de los motores..."
-          kill $PID_OSCILADOR 2>/dev/null || true
-          echo "🏁 Satélite apagado de forma limpia."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-        
+          echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
+          PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
+          TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
+          
+          echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
+          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
+          cat playlist_local.txt
+          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
+          
+          # 🎥 FFMEG MODIFICADO CON MOVIMIENTO DE IZQUIERDA A DERECHA
+          # Explicación matemática de x:
+          # Se calcula '-tw + (t*50)'. Empieza oculto a la izquierda (-tw) y avanza 50 píxeles por segundo hacia la derecha.
+          # El 'mod(..., 1500)' hace que cuando el texto avance mucho, se reinicie y vuelva a empezar desde la izquierda.
+          ffmpeg -y \
+            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
+            -f concat -safe 0 \
+            -i playlist_local.txt \
+            -re -loop 1 -i plantilla_horizontal.png \
+            -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.02:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x='mod(-tw+t*50, 1500)':y=665:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
+            -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
+            -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+            -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
+            -f mpegts "${{ secrets.KICK_RTMP_URL }}" || true
+          
+          # Apagamos el bucle de texto al terminar el directo
+          kill $PIDS_BUCLE 2>/dev/null || true
+          echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
