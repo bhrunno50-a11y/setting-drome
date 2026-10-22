@@ -25,7 +25,7 @@ jobs:
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
                   
-# Descargamos las noticias completas a un archivo local
+          # Descargamos las noticias completas a un archivo local
           echo "📡 [MUTINY TV] SUCCIONANDO NOTICIAS PARA ROTACIÓN..."
           curl -s "$URL_GIST_NOTICIAS" > noticias_completas.txt
           
