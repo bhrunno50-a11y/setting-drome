@@ -1,4 +1,4 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v716 - SRT Sync Core Fixed
+name: 📡 Mutiny TV IPTV Pirate Engine v720 - SRT Sync Core Fixed
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -15,52 +15,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
 
-      - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
+      - name: 🚀 Emisión Directa Unificada Continua Inmune (v720 - Método Nativo)
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v716 - REPARADO MULTI-STREAM]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v720 - NATIVE FFmpeg PIPELINE]
           export TERM=xterm
           
-          echo "Cargando..." > letrero.txt
+          echo "Conectando al Satélite..." > letrero.txt
           echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
           
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
           URL_GIST_PLAYLIST="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/playlist.txt"
-         
+           
+          # Carga inicial de marquesina inferior
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo.txt
+          
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          echo "# Lista de videos locales para concat" > playlist_local.txt
-          contador=1
-          
-          while read -r linea || [ -n "$linea" ]; do
-            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
-            
-            if [ -n "$URL_INTERNET" ]; then
-              echo "📥 Pre-descargando Tramo $contador de internet: $URL_INTERNET"
-              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" </dev/null \
-                       -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
-                       -o "local_part_${contador}.mp4" "$URL_INTERNET"
-              
-              echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
-              contador=$((contador + 1))
-            fi
-          done < grilla_cruda.txt
-
-          echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
-          PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
-          TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
-          
-          echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" > letrero.txt
-          echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
-          cat playlist_local.txt
-          
-          echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT REPARADO..."
-          
-          # [CAMBIOS ESTRELLA]: -re va AL PRINCIPIO de la lectura del concat.
-          # Eliminado el "shortest=1" para evitar cierres abruptos entre transiciones de video.
-          ffmpeg -y -re \
-            -f concat -safe 0 -i playlist_local.txt \
+          # =========================================================================
+          # 🔥 EL COHETE MAESTRO: FFmpeg actúa como Servidor e Inyector SRT simultáneo.
+          # -listen 1 abre un puerto local RTMP limpio en el puerto interno 1935.
+          # -timeout -1 previene que este proceso muera cuando hay baches entre películas.
+          # =========================================================================
+          ffmpeg -y \
+            -f flv -listen 1 -timeout -1 -i rtmp://127.0.0.1:1935/live/stream_maestro \
             -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
             -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
             -map "[canvas_fusionado]" -map 0:a:0? \
@@ -68,8 +46,54 @@ jobs:
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
             -flvflags no_duration_filesize \
-            -f mpegts "${{ secrets.KICK_SRT_URL }}?mode=caller&latency=200000" || true
+            -f mpegts "${{ secrets.KICK_SRT_URL }}" &
+          
+          PID_MAESTRO=$!
+          
+          # Esperamos 4 segundos exactos a que el socket local del FFmpeg Maestro esté ARRIBA y escuchando.
+          sleep 4
+          
+          contador=1
+          
+          # =========================================================================
+          # 📥 EL ALIMENTADOR (ALIMENTA AL FFmpeg MAESTRO SIN ESFUERZO DE CPU)
+          # =========================================================================
+          while read -r linea || [ -n "$linea" ]; do
+            URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
+            TITULO_PELI=$(echo "$linea" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
+            
+            if [ -z "$TITULO_PELI" ]; then
+              TITULO_PELI="Sigueme en TikTok @streamdrome"
+            fi
+            
+            if [ -n "$URL_INTERNET" ]; then
+              FILE_LOCAL="local_part_${contador}.mp4"
+              
+              echo "📥 [TRAMO $contador] Pre-descargando: $TITULO_PELI"
+              curl -L -H "Authorization: token ${{ secrets.TOKEN_B }}" </dev/null \
+                       -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
+                       -o "$FILE_LOCAL" "$URL_INTERNET"
+              
+              # Cambiamos el letrero superior. El maestro lo lee al vuelo.
+              echo "🎬 Ahora en Vivo: $TITULO_PELI" > letrero.txt
+              echo "📡 [ALIMENTADOR] ESCUPIENDO DATOS AL PUERTO INTERNO..."
+              
+              # Usamos -flvflags no_duration_filesize para que el maestro entienda el flujo como un stream continuo
+              ffmpeg -re -i "$FILE_LOCAL" -c copy -f flv -flvflags no_duration_filesize rtmp://127.0.0.1:1935/live/stream_maestro || true
+              
+              # Liberamos espacio
+              rm -f "$FILE_LOCAL"
+              contador=$((contador + 1))
+              
+              # Pausa milimétrica de cortesía para estabilizar el socket local
+              sleep 2
+            fi
+          done < grilla_cruda.txt
 
-          echo "🏁 La maratón ha finalizado de largo fluido. Satélite apagado."
+          echo "🏁 Maratón completada. Bajando palanca del caño maestro..."
+          kill $PID_MAESTRO
+          echo "🏁 Satélite apagado de forma limpia."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          
