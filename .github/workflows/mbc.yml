@@ -1,4 +1,4 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v721 - SRT Sync Core Fixed
+name: 📡 Mutiny TV IPTV Pirate Engine v722 - SRT Sync Core Fixed
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -15,9 +15,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu-core curl jq
 
-      - name: 🚀 Emisión Directa Unificada Continua Inmune (v721 - Caño Infinito)
+      - name: 🚀 Emisión Directa Unificada Continua Inmune (v722 - Caño Infinito)
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v721 - INFINITE CONCAT PIPE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v722 - BOOTSTRAPPED CONCAT PIPE]
           export TERM=xterm
           
           echo "Conectando al Satélite..." > letrero.txt
@@ -32,31 +32,14 @@ jobs:
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # Creamos una tubería de lista (Playlist Dinámica)
+          # Creamos la base de la playlist
           echo "# Playlist Dinámica Mutiny" > playlist_infinita.txt
           
-          # =========================================================================
-          # 🔥 EL EMISOR FIJO: Lee desde playlist_infinita.txt de manera persistente.
-          # Usamos las flags de re-lectura para que FFmpeg no aborte si el archivo cambia al vuelo.
-          # =========================================================================
-          ffmpeg -y -re \
-            -f concat -safe 0 -auto_convert 1 -i playlist_infinita.txt \
-            -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
-            -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
-            -map "[canvas_fusionado]" -map 0:a:0? \
-            -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
-            -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
-            -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
-            -flvflags no_duration_filesize \
-            -f mpegts "${{ secrets.KICK_SRT_URL }}" &
-          
-          PID_MAESTRO=$!
-          
           contador=1
+          MAESTRO_ENCENDIDO=0
           
           # =========================================================================
           # 📥 EL ALIMENTADOR DINÁMICO DE LA PLAYLIST
-          # Descarga el tramo y lo anexa a la playlist_infinita.txt al vuelo.
           # =========================================================================
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
@@ -74,22 +57,41 @@ jobs:
                        -H "User-Agent: VLC/3.0.18 LibVLC/3.0.18" \
                        -o "$FILE_LOCAL" "$URL_INTERNET"
               
-              # Inyectamos el archivo recién descargado al mapa de ruta del Concat Maestro
+              # Inyectamos el archivo en la playlist ANTES de arrancar FFmpeg por primera vez
               echo "file '$FILE_LOCAL'" >> playlist_infinita.txt
               
               # Cambiamos el letrero superior al instante
               echo "🎬 Ahora en Vivo: $TITULO_PELI" > letrero.txt
-              echo "📡 [SISTEMA] PELÍCULA MAPEADA EXITOSAMENTE EN LA CAÑERÍA."
               
-              # Esperamos a que el archivo se reproduzca estimando su duración mediante ffprobe 
-              # para no borrarlo del disco duro antes de tiempo
+              # =========================================================================
+              # 🔥 ARRANQUE DEL EMISOR FIJO (Solo se ejecuta una vez con el primer video listo)
+              # =========================================================================
+              if [ $MAESTRO_ENCENDIDO -eq 0 ]; then
+                echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO CON PRIMER VIDEO LISTO..."
+                ffmpeg -y -re \
+                  -f concat -safe 0 -auto_convert 1 -i playlist_infinita.txt \
+                  -filter_complex "color=c=black:s=1280x720:d=999999[fondo_base]; [0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [fondo_base][peli_expandida]overlay=0:0[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=1280-mod(t*130\,1280+tw):y=665:fontsize=24:fontcolor=0xFFFFFF:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
+                  -r 30 -g 60 -keyint_min 60 -pix_fmt yuv420p \
+                  -map "[canvas_fusionado]" -map 0:a:0? \
+                  -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
+                  -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
+                  -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
+                  -flvflags no_duration_filesize \
+                  -f mpegts "${{ secrets.KICK_SRT_URL }}" &
+                
+                PID_MAESTRO=$!
+                MAESTRO_ENCENDIDO=1
+                sleep 2
+              fi
+              
+              # Calculamos la duración para mantener sincronizado el hilo de Bash
               DURACION_SEG=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$FILE_LOCAL" | awk '{print int($1)}')
               echo "⏱️ Duración estimada del tramo: ${DURACION_SEG} segundos. Transmitiendo..."
               
-              # Mantenemos el hilo de Bash esperando a que termine de reproducirse en el stream
+              # Esperamos a que el video termine de reproducirse en el stream
               sleep "$DURACION_SEG"
               
-              # Una vez reproducido, limpiamos y avanzamos
+              # Una vez reproducido, limpiamos y avanzamos al siguiente loop
               rm -f "$FILE_LOCAL"
               contador=$((contador + 1))
               sleep 1
@@ -97,7 +99,11 @@ jobs:
           done < grilla_cruda.txt
 
           echo "🏁 Maratón completada. Bajando palanca del caño maestro..."
-          kill $PID_MAESTRO
+          if [ $MAESTRO_ENCENDIDO -eq 1 ]; then
+            kill $PID_MAESTRO
+          fi
           echo "🏁 Satélite apagado de forma limpia."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+         
