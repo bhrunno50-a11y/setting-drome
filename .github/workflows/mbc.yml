@@ -73,6 +73,7 @@ jobs:
           # Inyección directa SRT usando tus credenciales de la cuenta de pruebas streamdrome_2
           ffmpeg -y \
             -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
+            -ss 01:00:00 \
             -f concat -safe 0 \
             -i playlist_local.txt \
             -re -loop 1 -i plantilla_horizontal.png \
@@ -81,4 +82,4 @@ jobs:
             -c:v libx264 -preset superfast -tune zerolatency -b:v 2500k -maxrate 2500k -bufsize 5000k \
             -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
             -f mpegts "${{ secrets.KICK_SRT_URL }}" || true
-          
+
