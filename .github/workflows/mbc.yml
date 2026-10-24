@@ -1,4 +1,4 @@
-name: 📡 Mutiny TV IPTV Pirate Engine v715 - SRT Sync Core
+name: 📡 Mutiny TV IPTV Pirate Engine v716 - SRT Dynamic Sync Core
 
 on:
   workflow_dispatch: # Botón manual de PLAY en la web de GitHub
@@ -17,10 +17,9 @@ jobs:
 
       - name: 🚀 Emisión Directa Unificada hacia Kick vía SRT Síncrona Inmune
         run: |
-          # 🪓 [REACTOR CENTRAL INDUSTRIAL v715 - DIEGO FIXED SRT CORE]
+          # 🪓 [REACTOR CENTRAL INDUSTRIAL v716 - DIEGO DYNAMIC SRT CORE]
           export TERM=xterm
           
-          echo "Cargando..." > letrero.txt
           echo "🍿 Mutiny TV - Transmisión Soberana en Vivo" > abajo.txt
           
           URL_GIST_NOTICIAS="https://gist.githubusercontent.com/bhrunno50-a11y/5abfba18c2334105829d1badfff0c09b/raw/noticias.txt"
@@ -29,18 +28,25 @@ jobs:
           echo "📡 [MUTINY TV] SUCCIONANDO GRILLA PARA DESCARGA LOCAL..."
           curl -L -s "$URL_GIST_PLAYLIST" | tr -d '\r' | sed '/^$/d' > grilla_cruda.txt
           
-          # [SOLUCIÓN CONTROL DE DAÑOS]: Sanitización de textos para prevenir roturas en drawtext
+          # [SOLUCIÓN CONTROL DE DAÑOS]: Sanitización de textos de noticias para marquesina inferior
           curl -s "$URL_GIST_NOTICIAS" | head -n 1 | tr -d '\r\n' > abajo_crudo.txt
-          # Escapamos comillas y caracteres raros reemplazándolos de forma segura para FFmpeg
           cat abajo_crudo.txt | sed "s/'//g" | sed 's/!//g' > abajo.txt
 
-          # Preparación del archivo de concatenación local
+          # Preparación del archivo de concatenación local y base de tiempo para subtítulos dinámicos
           echo "# Lista de videos locales para concat" > playlist_local.txt
-          contador=1
+          echo "" > maraton_titulos.srt
           
-          # Descarga veloz saltando el límite de 2GB al disco de la máquina virtual
+          contador=1
+          tiempo_acumulado=0
+          
+          # Descarga veloz a la máquina virtual y cálculo de tiempos para títulos dinámicos
           while read -r linea || [ -n "$linea" ]; do
             URL_INTERNET=$(echo "$linea" | awk -F'|' '{print $1}' | tr -d ' ')
+            TITULO_VIDEO=$(echo "$linea" | awk -F'|' '{print $2}' | sed "s/'//g; s/!//g" | sed 's/^[ \t]*//;s/[ \t]*$//')
+            
+            if [ -z "$TITULO_VIDEO" ]; then
+              TITULO_VIDEO="Sigueme en TikTok @streamdrome"
+            fi
             
             if [ -n "$URL_INTERNET" ]; then
               echo "📥 Pre-descargando Tramo $contador de internet: $URL_INTERNET"
@@ -49,19 +55,37 @@ jobs:
                    -o "local_part_${contador}.mp4" "$URL_INTERNET"
               
               echo "file 'local_part_${contador}.mp4'" >> playlist_local.txt
+              
+              # 🧠 ARQUITECTURA DE TIEMPO REAL: Extraemos la duración exacta del video bajado usando ffprobe
+              duracion=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:key=value "local_part_${contador}.mp4" | awk '{print int($1)}')
+              if [ -z "$duracion" ] || [ "$duracion" -le 0 ]; then
+                duracion=1200 # En caso de error de lectura le asigna 20 minutos base por seguridad
+              fi
+              
+              # Calculamos fin del tramo
+              tiempo_fin=$((tiempo_acumulado + duracion))
+              
+              # Convertimos segundos en formato SRT estándar (HH:MM:SS,000)
+              inicio_srt=$(date -u -d "@$tiempo_acumulado" +"%H:%M:%S,000")
+              fin_srt=$(date -u -d "@$tiempo_fin" +"%H:%M:%S,000")
+              
+              # Inyectamos el bloque de subtítulo correspondiente a este video específico
+              echo "$contador" >> maraton_titulos.srt
+              echo "$inicio_srt --> $fin_srt" >> maraton_titulos.srt
+              echo "$TITULO_VIDEO" >> maraton_titulos.srt
+              echo "" >> maraton_titulos.srt
+              
+              # Desplazamos el puntero del reloj acumulado para el próximo video
+              tiempo_acumulado=$tiempo_fin
               contador=$((contador + 1))
             fi
           done < grilla_cruda.txt
-
-          echo "🪓 [MUTINY] DETECTANDO PRIMER TÍTULO DE MARATÓN..."
-          PRIMERA_LINEA=$(head -n 1 grilla_cruda.txt)
-          TITULO_INICIAL=$(echo "$PRIMERA_LINEA" | awk -F'|' '{print $2}' | sed 's/^[ \t]*//;s/[ \t]*$//')
-          
-          # Sanitizamos el título inicial contra caracteres especiales del sistema
-          echo "${TITULO_INICIAL:-sigueme en tiktok @streamdrome}" | sed "s/'//g" | sed 's/!//g' > letrero.txt
           
           echo "🪓 [MUTINY] COMPROBANDO LA CAÑERÍA LOCAL RE-DIRECCIONADA:"
           cat playlist_local.txt
+          echo "🪓 [MUTINY] MAPA DE SUBTÍTULOS DINÁMICOS GENERADO:"
+          cat maraton_titulos.srt
+          
           echo "📡 [MUTINY TV] ENCIENDIENDO CAÑO MAESTRO DE EMISIÓN SRT DE TRACCIÓN LIVIANA..."
           
           # Generación automática de un fondo oscuro si no existe la plantilla horizontal
@@ -69,15 +93,16 @@ jobs:
             ffmpeg -f lavfi -i color=c=black:s=1280x720:d=1 -vframes 1 plantilla_horizontal.png
           fi
 
-          # 🧠 [REREACTOR DE VIDEO & AUDIO v715 - CORRECCIÓN MARQUESINA MÓVIL]
+          # 🧠 [REREACTOR DE VIDEO & AUDIO v716 - CORRECCIÓN MARQUESINA MÓVIL Y LETRERO DINÁMICO]
           ffmpeg -y \
-          -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin -re -async 1 \
+          -fflags +genpts+igndts+flush_packets+discardcorrupt+nofillin \
+          -re -async 1 -vsync cfr \
           -f concat -safe 0 \
           -i playlist_local.txt \
           -re -loop 1 -i plantilla_horizontal.png \
-          -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]drawtext=textfile=letrero.txt:reload=1:x=30:y=25:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.6:boxborderw=5,drawtext=textfile=abajo.txt:reload=1:x=w-mod(t*120\,w+tw):y=665:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
+          -filter_complex "[0:v]scale=1280:720,crop=1270:710:5:5,hue=s=0.95,rotate=0.01:fillcolor=black[peli_expandida]; [1:v]scale=1280:720[fondo_base]; [fondo_base][peli_expandida]overlay=0:0:shortest=1[canvas_parcial]; [canvas_parcial]subtitles=maraton_titulos.srt:force_style='Fontname=DejaVu Sans,Fontsize=18,PrimaryColour=&H00E676&,BorderStyle=3,Outline=2,OutlineColour=&H000000&,Alignment=5,MarginL=30,MarginV=660'[canvas_subtitulado]; [canvas_subtitulado]drawtext=textfile=abajo.txt:reload=1:x=w-mod(t*120\,w+tw):y=665:fontsize=24:fontcolor=0x00e676:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:box=1:boxcolor=black@0.5:boxborderw=4[canvas_fusionado]" \
           -r 30 -g 60 -keyint_min 60 -map 0:a:0? -map "[canvas_fusionado]" -sn -dn -pix_fmt yuv420p \
-          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 5000k -maxrate 5000k -bufsize 5000k \
+          -c:v libx264 -preset ultrafast -tune zerolatency -b:v 5000k -maxrate 5000k -bufsize 8000k \
           -c:a aac -b:a 128k -ac 2 -ar 44100 -af "pan=stereo|c0=0.95*c0+0.05*c1|c1=0.05*c0+0.95*c1,aresample=async=1" \
           -f mpegts "${{ secrets.KICK_SRT_URL }}" || true
 
